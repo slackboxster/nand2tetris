@@ -1,0 +1,88 @@
+// This file is part of www.nand2tetris.org
+// and the book "The Elements of Computing Systems"
+// by Nisan and Schocken, MIT Press.
+// File name: projects/05/CPU.hdl
+
+/**
+ * The Central Processing unit (CPU).
+ * Consists of an ALU and a set of registers, designed to fetch and 
+ * execute instructions written in the Hack machine language.
+ * In particular, functions as follows:
+ * Executes the inputted instruction according to the Hack machine 
+ * language specification. The D and A in the language specification
+ * refer to CPU-resident registers, while M refers to the external
+ * memory location addressed by A, i.e. to Memory[A]. The inM input 
+ * holds the value of this location. If the current instruction needs 
+ * to write a value to M, the value is placed in outM, the address 
+ * of the target location is placed in the addressM output, and the 
+ * writeM control bit is asserted. (When writeM=0, any value may 
+ * appear in outM). The outM and writeM outputs are combinational: 
+ * they are affected instantaneously by the execution of the current 
+ * instruction. The addressM and pc outputs are clocked: although they 
+ * are affected by the execution of the current instruction, they commit 
+ * to their new values only in the next time unit. If reset=1 then the 
+ * CPU jumps to address 0 (i.e. sets pc=0 in next time unit) rather 
+ * than to the address resulting from executing the current instruction. 
+ */
+
+CHIP CPU {
+
+    IN  inM[16],         // M value input  (M = contents of RAM[A])
+        instruction[16], // Instruction for execution
+        reset;           // Signals whether to re-start the current
+                         // program (reset=1) or continue executing
+                         // the current program (reset=0).
+
+    OUT outM[16],        // M value output
+        writeM,          // Write into M? 
+        addressM[15],    // Address in data memory (of M)
+        pc[15];          // address of next instruction
+
+    PARTS:
+    // Put your code here:
+    
+
+    //decode 16 bit instruction:
+    // A instruction, bit 15 is a 0, the rest go into a register.
+    //instruction[0] == 0:
+    //if a cInstruction, but instruction[5] is set, then we load A with the value from ALU output.
+    Mux16(sel=instruction[15],a=instruction,b=outALU,out=inA);
+    /* if instruction[15], then instruction[15], else check instruction[5] */
+    Mux(sel=instruction[15],a=true,b=instruction[5],out=loadA);
+    ARegister(in=inA,load=loadA,out=outA);
+    /* d register loads only if it is both a C Instruction AND the proper destination bit is set (instruction[4]) */
+    And(a=instruction[15],b=instruction[4],out=loadD);
+    DRegister(in=outALU,load=loadD, out=outD);
+
+    //jump calculations:
+    And(a=instruction[2],b=ng,out=jumpng);
+    And(a=instruction[1],b=zr,out=jumpzr);
+    Or(a=zr,b=ng,out=zrorng);
+    Not(in=zrorng,out=notzrorng);
+    And(a=instruction[0],b=notzrorng,out=jumpgr);
+    Or8Way(in[0]=jumpng,in[1]=jumpzr,in[2]=jumpgr, out=canjump);
+    //can only do jumps on C-Instructions.
+    And(a=instruction[15],b=canjump,out=jump);
+    //And(a=jump,b=reset,out=notinc);
+    //Not(in=notinc, out=inc);
+    PC(in=outA,load=jump,inc=true, reset=reset,out[0..14]=pc);
+
+    //CInstruction:
+    //111a cccc ccdd djjj
+    //[15],[14].[13] == c instruction header
+    //[12] = a value
+    //[11],[10],[9],[8],[7],[6] == comp bits (zx,nx,zy,ny,f,no)
+    //[5],[4],[3] == destination bits. 5=store in A register, 4= store output in D register, 3= store in Mem( write outM, to addressM (val of A)
+    //[2],[1],[0] == jump bits
+    //DRegister == x on ALU, A == y on ALU
+    //if A value = 1, we put Mem(A) into ALU mem input, else we put A itself.
+    Mux16(sel=instruction[12],a=outA,b=inM,out=memMux);
+    ALU(x=outD, y=memMux, zx=instruction[11], nx=instruction[10], zy=instruction[9], ny=instruction[8], f=instruction[7], no=instruction[6],out=outALU,zr=zr,ng=ng);
+
+    //pipe ALU output to outM if the destination bit for memory is set.
+    And16to1(a=outALU,b=instruction[3],out=outM);
+    Mux(sel=instruction[15],b=instruction[3],out=writeM);
+    And16(a=outA,b=outA,out[0..14]=addressM);
+
+
+}

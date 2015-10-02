@@ -1,0 +1,3 @@
+class InvalidCommandTypeException extends Exception {
+
+}

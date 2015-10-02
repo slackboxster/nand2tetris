@@ -1,0 +1,3 @@
+class BlankLineException extends Exception {
+
+}
