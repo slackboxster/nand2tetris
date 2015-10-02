@@ -1,13 +1,5 @@
 #!/usr/bin/env groovy
 
-//import Parser
-//import Code
-//import SymbolTable
-
-//import argparse
-//import sys
-import java.nio.charset.Charset
-
 CliBuilder cli = new CliBuilder(
         usage:"assembler <infile>\ninfile: .asm file that should be assembled",
         header:"Assembler from .asm to Hack machine language\nOptions:"
@@ -23,13 +15,15 @@ if (options.arguments().size() == 0) {
 
 File infile = new File(options.arguments()[0])
 Parser parser = new Parser(infile)
-Code code = new Code()
+List<Command> commands = parser.collect()
+SymbolTable symbolTable = new SymbolTable(commands)
+Code code = new Code(symbolTable: symbolTable)
 
 File outfile = options.o ? new File(options.o) : new File("${infile.path[0..-4]}hack")
 
-    List instructions = parser.collect { command ->
-        return code.translate(command)
-    }
+List<String> instructions = commands.findResults { command ->
+    return code.translate(command)
+}
 
-    outfile.write("${instructions.join('\n')}\n")
+outfile.write("${instructions.join('\n')}\n")
 

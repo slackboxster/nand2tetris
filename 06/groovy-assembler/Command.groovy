@@ -11,11 +11,14 @@ class Command {
     String computation = ''
     String jump = ''
 
-    Command(String line) {
-
+    Command(String untrimmedLine) {
+        if (untrimmedLine.contains('//')) {
+            untrimmedLine = untrimmedLine[0..(untrimmedLine.indexOf('//') - 1)]
+        }
+        String line = untrimmedLine.trim()
         originalLine = line
 
-        if (line.allWhitespace || line.trim().startsWith('//'))
+        if (line.allWhitespace || line.startsWith('//'))
             throw new BlankLineException()
         if (line.startsWith('@')) {
             commandType = A_COMMAND
@@ -35,6 +38,10 @@ class Command {
             }
         }
     }
+
+    Boolean isL() { return commandType == L_COMMAND }
+    Boolean isC() { return commandType == C_COMMAND }
+    Boolean isA() { return commandType == A_COMMAND }
 
     String toString() {
         """\

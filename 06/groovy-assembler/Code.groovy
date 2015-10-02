@@ -1,11 +1,11 @@
-import java.nio.charset.Charset
-
 class Code {
+
+    SymbolTable symbolTable
 
     String translate(Command command) {
         switch(command.commandType) {
             case Command.A_COMMAND:
-                return "0${getValueBinary(command.symbol)}"
+                return "0${getAddressOrValueBinary(command.symbol)}"
                 break
             case Command.L_COMMAND:
                 return null
@@ -19,8 +19,20 @@ class Code {
         }
     }
 
+    String getAddressOrValueBinary(String symbol) {
+        return symbolTable.contains(symbol) ? intToBinaryString(symbolTable.getAddress(symbol)) : getValueBinary(symbol)
+    }
+
+    String intToBinaryString(String intValueString) {
+        return intToBinaryString(intValueString.toInteger())
+    }
+
+    String intToBinaryString(Integer intValue) {
+        Integer.toBinaryString(intValue).padLeft(15,'0')
+    }
+
     String getValueBinary(String valueDecimal) {
-        Integer.toBinaryString(Integer.parseInt(valueDecimal.trim())).padLeft(15,'0')
+        intToBinaryString(valueDecimal)
     }
 
     String getDestinationBinary(String destinationMnemonic) {
@@ -34,7 +46,7 @@ class Code {
             ('AD'):  '110',
             ('AMD'): '111'
         ]
-        return destinationSymbols."${destinationMnemonic.trim()}"
+        return destinationSymbols."$destinationMnemonic"
     }
 
     String getComputationBinary(String computationMnemonic) {
@@ -69,7 +81,7 @@ class Code {
             ('D|M'): '1010101'
         ]
 
-        return computationSymbols."${computationMnemonic.trim()}"
+        return computationSymbols."$computationMnemonic"
     }
 
     String getJumpBinary(String jumpMnemonic) {
@@ -83,7 +95,7 @@ class Code {
             JLE: '110',
             JMP: '111'
         ]
-        return jumpSymbols."${jumpMnemonic.trim()}"
+        return jumpSymbols."$jumpMnemonic"
     }
 
 }
